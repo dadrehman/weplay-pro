@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const friend_controller_1 = require("../controllers/friend.controller");
+const auth_middleware_1 = require("../middleware/auth.middleware");
+const router = (0, express_1.Router)();
+router.use(auth_middleware_1.authenticateJWT);
+router.get('/', friend_controller_1.FriendController.getFriends);
+router.get('/requests', friend_controller_1.FriendController.getRequests);
+router.post('/request', friend_controller_1.FriendController.sendRequest);
+router.post('/accept', friend_controller_1.FriendController.acceptRequest);
+router.post('/reject', friend_controller_1.FriendController.rejectRequest);
+router.get('/search', friend_controller_1.FriendController.searchUsers);
+exports.default = router;
