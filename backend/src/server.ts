@@ -46,9 +46,9 @@ server.on('error', (err: NodeJS.ErrnoException) => {
   }
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`[WePlay Backend] Server listening on port ${PORT}`);
-  console.log(`[WePlay Backend] Health check available at http://localhost:${PORT}/health`);
+  console.log(`[WePlay Backend] Health check available at http://0.0.0.0:${PORT}/health`);
   // Validate Meta WhatsApp token on startup — logs clear error if expired
   whatsappService.validateMetaTokenOnStartup().catch(() => {});
 });
