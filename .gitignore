@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+*/node_modules/
+package-lock.json
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+*.env
+
+# Production Builds
+dist/
+build/
+*/build/
+*/dist/
+.next/
+*/.next/
+out/
+*/out/
+
+# Dart & Flutter
+.dart_tool/
+*/.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+*.pubcache
+*.pub-cache
+
+# Android & Gradle
+.gradle/
+*/.gradle/
+local.properties
+*.apk
+*.aab
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Editor & OS files
+.vscode/
+.idea/
+*.iml
+.DS_Store
+Thumbs.db

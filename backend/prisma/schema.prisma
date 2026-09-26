@@ -1,0 +1,286 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  user
+  admin
+  superadmin
+}
+
+enum ActionType {
+  COIN_ADJUST
+  BAN
+  UNBAN
+}
+
+enum RoomStatus {
+  ACTIVE
+  TERMINATED
+}
+
+model User {
+  id             String      @id @default(uuid())
+  displayId      String?     @unique @map("display_id")
+  username       String      @unique
+  email          String      @unique
+  phone          String?     @unique
+  passwordHash   String      @map("password_hash")
+  role           Role        @default(user)
+  coinsBalance   BigInt      @default(1000) @map("coins_balance")
+  charmPoints    BigInt      @default(0) @map("charm_points")
+  expPoints      BigInt      @default(0) @map("exp_points")
+  activeLevel    Int         @default(1) @map("active_level")
+  blessingPoints BigInt      @default(0) @map("blessing_points")
+  signature      String      @default("Welcome to WePlay!") @map("signature")
+  region         String      @default("Pakistan")
+  gender         String      @default("MALE") // MALE, FEMALE, OTHER
+  birthday       String?     @map("birthday")
+  profileCompleted Boolean   @default(false) @map("profile_completed")
+  familyId       String?     @map("family_id")
+  isBanned       Boolean     @default(false) @map("is_banned")
+  isDeleted      Boolean     @default(false) @map("is_deleted")
+  deletedAt      DateTime?   @map("deleted_at")
+  avatarUrl      String?     @map("avatar_url")
+
+  firebaseUid    String?     @unique @map("firebase_uid")
+  authProvider   String      @default("LOCAL") @map("auth_provider")
+  lastLoginAt    DateTime?   @map("last_login_at")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  // Relations for admin audit trail
+  actionsPerformed AdminLog[] @relation("AdminActions")
+  actionsReceived  AdminLog[] @relation("TargetUserActions")
+
+  // Phase 2 Voice Room Relations
+  hostedRooms      Room[]            @relation("HostedRooms")
+  occupiedSeats    RoomSeat[]
+  roomParticipants RoomParticipant[]
+
+  // Phase 2 Direct Messaging & Social Relations
+  sentMessages     DirectMessage[]   @relation("SentMessages")
+  receivedMessages DirectMessage[]   @relation("ReceivedMessages")
+  friendships      Friendship[]      @relation("UserFriendships")
+  friendOf         Friendship[]      @relation("FriendFriendships")
+
+  // Phase 1.5 Family & Titles & Badges
+  family        Family?     @relation("FamilyMembers", fields: [familyId], references: [id], onDelete: SetNull)
+  ownedFamilies Family[]    @relation("FamilyOwner")
+  titles        UserTitle[]
+  badges        UserBadge[]
+  tasks         UserTaskProgress[]
+
+  @@map("users")
+
+}
+
+model Family {
+  id             String   @id @default(uuid())
+  name           String   @unique
+  badgeTag       String   @map("badge_tag")
+  badgeBgColor   String   @default("#7928CA") @map("badge_bg_color")
+  badgeTextColor String   @default("#FFFFFF") @map("badge_text_color")
+  iconUrl        String?  @map("icon_url")
+  level          Int      @default(1)
+  ownerId        String   @map("owner_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  owner   User   @relation("FamilyOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  members User[] @relation("FamilyMembers")
+
+  @@map("families")
+}
+
+model Title {
+  id              String      @id @default(uuid())
+  name            String      @unique
+  iconUrl         String?     @map("icon_url")
+  rarityTier      String      @default("RARE") @map("rarity_tier")
+  bgGradientStart String      @default("#FF416C") @map("bg_gradient_start")
+  bgGradientEnd   String      @default("#FF4B2B") @map("bg_gradient_end")
+  textColor       String      @default("#FFFFFF") @map("text_color")
+  borderColor     String?     @map("border_color")
+  minLevel        Int         @default(1) @map("min_level")
+  isActive        Boolean     @default(true) @map("is_active")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  userTitles      UserTitle[]
+
+  @@map("titles")
+}
+
+model UserTitle {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  titleId    String   @map("title_id")
+  isEquipped Boolean  @default(false) @map("is_equipped")
+  grantedAt  DateTime @default(now()) @map("granted_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title Title @relation(fields: [titleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, titleId])
+  @@map("user_titles")
+}
+
+model Badge {
+  id           String      @id @default(uuid())
+  name         String      @unique
+  iconUrl      String?     @map("icon_url")
+  category     String      @default("HONOR")
+  shape        String      @default("HEXAGON")
+  badgeBgColor String      @default("#7928CA") @map("badge_bg_color")
+  minLevel     Int         @default(1) @map("min_level")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  userBadges   UserBadge[]
+
+  @@map("badges")
+}
+
+model UserBadge {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  badgeId    String   @map("badge_id")
+  unlockedAt DateTime @default(now()) @map("unlocked_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+  @@map("user_badges")
+}
+
+model AdminLog {
+  id           String     @id @default(uuid())
+  adminId      String     @map("admin_id")
+  targetUserId String     @map("target_user_id")
+  actionType   ActionType @map("action_type")
+  amount       BigInt?    @map("amount")
+  reason       String     @map("reason")
+  timestamp    DateTime   @default(now()) @map("timestamp")
+
+  admin      User @relation("AdminActions", fields: [adminId], references: [id], onDelete: Cascade)
+  targetUser User @relation("TargetUserActions", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@map("admin_logs")
+}
+
+model Room {
+  id            String            @id @default(uuid())
+  roomIdDisplay String?           @unique @map("room_id_display")
+  title         String
+  roomType      String            @default("TEMPORARY") @map("room_type") // 'TEMPORARY' | 'ADVANCED'
+  category      String            @default("ALL") @map("category") // 'ALL' | 'FRIENDS' | 'MUSIC' | 'VIDEO' | 'AUCTION'
+  hostId        String            @map("host_id")
+  isLocked      Boolean           @default(false) @map("is_locked")
+  agoraChannel  String            @map("agora_channel")
+  isActive      Boolean           @default(true) @map("is_active")
+  status        RoomStatus        @default(ACTIVE)
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  host         User              @relation("HostedRooms", fields: [hostId], references: [id], onDelete: Cascade)
+  seats        RoomSeat[]
+  participants RoomParticipant[]
+
+  @@map("rooms")
+}
+
+model RoomSeat {
+  id        String   @id @default(uuid())
+  roomId    String   @map("room_id")
+  seatIndex Int      @map("seat_index") // 0 to 7
+  userId    String?  @map("user_id")
+  isLocked  Boolean  @default(false) @map("is_locked")
+  isMuted   Boolean  @default(false) @map("is_muted")
+
+  room Room  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([roomId, seatIndex])
+  @@map("room_seats")
+}
+
+model RoomParticipant {
+  id         String   @id @default(uuid())
+  roomId     String   @map("room_id")
+  userId     String   @map("user_id")
+  seatIndex  Int?     @map("seat_index") // 0 to 7 if seated, null if listener
+  isSpeaking Boolean  @default(false) @map("is_speaking")
+  joinedAt   DateTime @default(now()) @map("joined_at")
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("room_participants")
+}
+
+model DirectMessage {
+  id         String   @id @default(uuid())
+  senderId   String   @map("sender_id")
+  receiverId String   @map("receiver_id")
+  content    String
+  isRead     Boolean  @default(false) @map("is_read")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  sender   User @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@map("direct_messages")
+}
+
+model Friendship {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  friendId  String   @map("friend_id")
+  status    String   @default("PENDING") @map("status") // 'PENDING' | 'ACCEPTED'
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User @relation("UserFriendships", fields: [userId], references: [id], onDelete: Cascade)
+  friend User @relation("FriendFriendships", fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, friendId])
+  @@map("friendships")
+}
+
+model Event {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  bannerUrl   String?  @map("banner_url")
+  rewardCoins BigInt   @default(0) @map("reward_coins")
+  rewardCharm BigInt   @default(0) @map("reward_charm")
+  startAt     DateTime @map("start_at")
+  endAt       DateTime @map("end_at")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("events")
+}
+
+model UserTaskProgress {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  taskId      String   @map("task_id")
+  category    String   @default("DAILY") // 'DAILY' | 'GROWTH' | 'FAMILY'
+  progress    Int      @default(0)
+  target      Int      @default(1)
+  isCompleted Boolean  @default(false) @map("is_completed")
+  isClaimed   Boolean  @default(false) @map("is_claimed")
+  dateKey     String?  @map("date_key") // YYYY-MM-DD
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, taskId, dateKey])
+  @@map("user_task_progress")
+}
+

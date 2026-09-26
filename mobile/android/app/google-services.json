@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "734890973762",
+    "project_id": "weplay-pro-29c17",
+    "storage_bucket": "weplay-pro-29c17.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:734890973762:android:3a61ce45df1a5fd273ebdb",
+        "android_client_info": {
+          "package_name": "com.example.weplay_mobile"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "734890973762-0ejlnrt9bamkhl0o2h6oq9fb3ecedklp.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC1ZuoLnrSotFIBd1gkmte-QmhGwD0g1Wo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "734890973762-0ejlnrt9bamkhl0o2h6oq9fb3ecedklp.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
