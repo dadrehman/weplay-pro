@@ -19,7 +19,10 @@ const app = express();
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express.json());
 
-// Health check endpoint
+// Health check endpoints
+app.get('/', (req: Request, res: Response) => {
+  res.status(200).json({ status: 'ok', message: 'WePlay Backend is running' });
+});
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
