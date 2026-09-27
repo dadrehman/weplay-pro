@@ -8,7 +8,7 @@ const child_process_1 = require("child_process");
 const app_1 = __importDefault(require("./app"));
 const socket_handler_1 = require("./socket/socket.handler");
 const whatsapp_service_1 = require("./services/whatsapp.service");
-const PORT = Number(process.env.PORT) || 5000;
+const PORT = process.env.PORT || 5000;
 const server = http_1.default.createServer(app_1.default);
 // Attach Socket.io
 (0, socket_handler_1.initializeSocketIO)(server);
@@ -33,7 +33,7 @@ server.on('error', (err) => {
                 }
                 setTimeout(() => {
                     server.listen(PORT, () => {
-                        console.log(`[WePlay Backend] Server successfully recovered and listening on port ${PORT}`);
+                        console.log(`[WePlay Backend] Server successfully recovered and listening on ${PORT}`);
                     });
                 }, 1200);
                 return;
@@ -49,17 +49,8 @@ server.on('error', (err) => {
         console.error('[WePlay Backend] Server runtime error:', err);
     }
 });
-if (typeof PORT === 'string' && isNaN(Number(PORT))) {
-    server.listen(PORT, () => {
-        console.log(`[WePlay Backend] Server listening on socket ${PORT}`);
-        whatsapp_service_1.whatsappService.validateMetaTokenOnStartup().catch(() => { });
-    });
-}
-else {
-    server.listen(Number(PORT), () => {
-        console.log(`[WePlay Backend] Server listening on port ${PORT}`);
-        console.log(`[WePlay Backend] Health check available at http://localhost:${PORT}/health`);
-        whatsapp_service_1.whatsappService.validateMetaTokenOnStartup().catch(() => { });
-    });
-}
+server.listen(PORT, () => {
+    console.log(`[WePlay Backend] Server listening on ${PORT}`);
+    whatsapp_service_1.whatsappService.validateMetaTokenOnStartup().catch(() => { });
+});
 exports.default = server;

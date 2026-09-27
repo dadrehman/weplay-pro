@@ -4,7 +4,7 @@ import app from './app';
 import { initializeSocketIO } from './socket/socket.handler';
 import { whatsappService } from './services/whatsapp.service';
 
-const PORT = Number(process.env.PORT) || 5000;
+const PORT = process.env.PORT || 5000;
 
 const server = http.createServer(app);
 
@@ -31,7 +31,7 @@ server.on('error', (err: NodeJS.ErrnoException) => {
         }
         setTimeout(() => {
           server.listen(PORT, () => {
-            console.log(`[WePlay Backend] Server successfully recovered and listening on port ${PORT}`);
+            console.log(`[WePlay Backend] Server successfully recovered and listening on ${PORT}`);
           });
         }, 1200);
         return;
@@ -46,10 +46,8 @@ server.on('error', (err: NodeJS.ErrnoException) => {
   }
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[WePlay Backend] Server listening on port ${PORT}`);
-  console.log(`[WePlay Backend] Health check available at http://0.0.0.0:${PORT}/health`);
-  // Validate Meta WhatsApp token on startup — logs clear error if expired
+server.listen(PORT, () => {
+  console.log(`[WePlay Backend] Server listening on ${PORT}`);
   whatsappService.validateMetaTokenOnStartup().catch(() => {});
 });
 
