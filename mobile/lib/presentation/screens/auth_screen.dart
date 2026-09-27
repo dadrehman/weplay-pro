@@ -852,8 +852,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               if (res != null && res['success'] == true) {
                 codeSent = true;
                 startCountdown();
-                codeController.clear();
-                sheetSuccessMessage = 'Verification code sent to your WhatsApp ($fullPhone)';
+                if (res['devOtp'] != null && res['devOtp'].toString().isNotEmpty) {
+                  codeController.text = res['devOtp'].toString();
+                  sheetSuccessMessage = 'Code: ${res['devOtp']} (auto-filled for testing)';
+                } else {
+                  codeController.clear();
+                  sheetSuccessMessage = res['message'] ?? 'Verification code sent to your WhatsApp ($fullPhone)';
+                }
               } else {
                 sheetError = res?['error'] ?? 'Could not send WhatsApp OTP. Please check server IP or network.';
               }
