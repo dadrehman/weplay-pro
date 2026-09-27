@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const prisma_1 = __importDefault(require("./db/prisma"));
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
 const admin_routes_1 = __importDefault(require("./routes/admin.routes"));
 const user_routes_1 = __importDefault(require("./routes/user.routes"));
@@ -27,6 +28,29 @@ app.get(['/', '/api'], (req, res) => {
 app.get(['/health', '/api/health'], (req, res) => {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+app.get(['/db-check', '/api/db-check'], async (req, res) => {
+    try {
+        const userCount = await prisma_1.default.user.count();
+        const superadmin = await prisma_1.default.user.findFirst({
+            where: { role: 'superadmin' },
+            select: { email: true, username: true, displayId: true, activeLevel: true },
+        });
+        res.status(200).json({
+            status: 'ok',
+            database: 'connected',
+            userCount,
+            superadmin: superadmin || 'Not yet seeded',
+        });
+    }
+    catch (err) {
+        res.status(500).json({
+            status: 'error',
+            database: 'disconnected',
+            message: err?.message || String(err),
+            url: process.env.DATABASE_URL ? process.env.DATABASE_URL.replace(/:[^:@]*@/, ':****@') : 'NOT SET',
+        });
+    }
+});
 // API Routes (matching both /api/... and /... for reverse proxies)
 app.use(['/api/auth', '/auth'], auth_routes_1.default);
 app.use(['/api/admin', '/admin'], admin_routes_1.default);
@@ -47,7 +71,7 @@ app.use((err, req, res, next) => {
     console.error('[Unhandled Server Error]:', err);
     res.status(500).json({
         error: 'Internal server error',
-        message: process.env.NODE_ENV === 'development' ? err.message : undefined,
+        message: err?.message || String(err),
     });
 });
 exports.default = app;

@@ -36,7 +36,9 @@ const registerSchema = z.object({
 });
 
 const loginSchema = z.object({
-  login: z.string().min(1, 'Username or email is required'),
+  login: z.string().optional(),
+  email: z.string().optional(),
+  username: z.string().optional(),
   password: z.string().min(1, 'Password is required'),
 });
 
@@ -135,13 +137,18 @@ export class AuthController {
         return;
       }
 
-      const { login, password } = parsed.data;
+      const { password } = parsed.data;
+      const identifier = (parsed.data.login || parsed.data.email || parsed.data.username || '').trim();
+      if (!identifier) {
+        res.status(400).json({ error: 'Username or email is required' });
+        return;
+      }
 
       const user = await prisma.user.findFirst({
         where: {
           OR: [
-            { email: { equals: login, mode: 'insensitive' } },
-            { username: { equals: login, mode: 'insensitive' } },
+            { email: { equals: identifier, mode: 'insensitive' } },
+            { username: { equals: identifier, mode: 'insensitive' } },
           ],
         },
       });

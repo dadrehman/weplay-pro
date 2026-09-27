@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import prisma from './db/prisma';
 import authRoutes from './routes/auth.routes';
 import adminRoutes from './routes/admin.routes';
 import userRoutes from './routes/user.routes';
@@ -27,6 +28,29 @@ app.get(['/health', '/api/health'], (req: Request, res: Response) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+app.get(['/db-check', '/api/db-check'], async (req: Request, res: Response) => {
+  try {
+    const userCount = await prisma.user.count();
+    const superadmin = await prisma.user.findFirst({
+      where: { role: 'superadmin' },
+      select: { email: true, username: true, displayId: true, activeLevel: true },
+    });
+    res.status(200).json({
+      status: 'ok',
+      database: 'connected',
+      userCount,
+      superadmin: superadmin || 'Not yet seeded',
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      status: 'error',
+      database: 'disconnected',
+      message: err?.message || String(err),
+      url: process.env.DATABASE_URL ? process.env.DATABASE_URL.replace(/:[^:@]*@/, ':****@') : 'NOT SET',
+    });
+  }
+});
+
 // API Routes (matching both /api/... and /... for reverse proxies)
 app.use(['/api/auth', '/auth'], authRoutes);
 app.use(['/api/admin', '/admin'], adminRoutes);
@@ -39,7 +63,6 @@ app.use(['/api/rankings', '/rankings'], rankingRoutes);
 app.use(['/api/tasks', '/tasks'], taskRoutes);
 app.use(['/api/events', '/events'], eventRoutes);
 
-
 // 404 Handler
 app.use((req: Request, res: Response) => {
   res.status(404).json({ error: 'Endpoint not found' });
@@ -50,7 +73,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error('[Unhandled Server Error]:', err);
   res.status(500).json({
     error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined,
+    message: err?.message || String(err),
   });
 });
 

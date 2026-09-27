@@ -37,7 +37,9 @@ const registerSchema = zod_1.z.object({
     role: zod_1.z.enum(['user', 'admin', 'superadmin']).optional(),
 });
 const loginSchema = zod_1.z.object({
-    login: zod_1.z.string().min(1, 'Username or email is required'),
+    login: zod_1.z.string().optional(),
+    email: zod_1.z.string().optional(),
+    username: zod_1.z.string().optional(),
     password: zod_1.z.string().min(1, 'Password is required'),
 });
 class AuthController {
@@ -125,12 +127,17 @@ class AuthController {
                 res.status(400).json({ error: parsed.error.errors[0].message });
                 return;
             }
-            const { login, password } = parsed.data;
+            const { password } = parsed.data;
+            const identifier = (parsed.data.login || parsed.data.email || parsed.data.username || '').trim();
+            if (!identifier) {
+                res.status(400).json({ error: 'Username or email is required' });
+                return;
+            }
             const user = await prisma_1.default.user.findFirst({
                 where: {
                     OR: [
-                        { email: { equals: login, mode: 'insensitive' } },
-                        { username: { equals: login, mode: 'insensitive' } },
+                        { email: { equals: identifier, mode: 'insensitive' } },
+                        { username: { equals: identifier, mode: 'insensitive' } },
                     ],
                 },
             });
