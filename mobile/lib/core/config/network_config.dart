@@ -11,33 +11,52 @@ class NetworkConfig {
   static const String googleServerClientId =
       '734890973762-0ejlnrt9bamkhl0o2h6oq9fb3ecedklp.apps.googleusercontent.com';
 
+  /// Default production API root (guaranteed to be the live cloud cPanel endpoint)
+  static const String defaultApiUrl = 'https://dadrehman.site/api';
+
   /// Candidate hosts to connect mobile client to backend
   static const List<String> candidateHosts = [
     'https://dadrehman.site/api',         // Live Production Backend (cPanel)
-    'https://weplaypro-4r3f8n3v.b4a.run', // Live Cloud Backend Backup
-    'http://127.0.0.1:5000',             // ADB reverse forwarded (instant & bypasses Windows Firewall)
-    'http://10.0.2.2:5000',              // Android Emulator loopback
-    'http://172.27.192.1:5000',          // MEmu / Hyper-V Virtual Switch Host
-    'http://192.168.0.106:5000',         // Host Wi-Fi IP (Physical Android/iOS)
-    'http://localhost:5000',             // Localhost / Web / Desktop
+    'https://weplaypro-4r3f8n3v.b4a.run/api', // Live Cloud Backend Backup
+    'http://127.0.0.1:5000/api',             // ADB reverse forwarded (instant & bypasses Windows Firewall)
+    'http://10.0.2.2:5000/api',              // Android Emulator loopback
+    'http://172.27.192.1:5000/api',          // MEmu / Hyper-V Virtual Switch Host
+    'http://192.168.0.106:5000/api',         // Host Wi-Fi IP (Physical Android/iOS)
+    'http://localhost:5000/api',             // Localhost / Web / Desktop
   ];
 
   /// Default host detection:
-  static String get defaultHost => 'https://dadrehman.site/api';
+  static String get defaultHost => defaultApiUrl;
 
   /// Initialize and load saved server URL from SharedPreferences or auto-detect alive host
   static Future<void> init() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getString(_serverUrlKey);
-      if (saved != null && saved.trim().isNotEmpty) {
-        _cachedBaseUrl = _sanitizeUrl(saved.trim());
-        return;
+
+      // If user had localhost saved from earlier laptop testing, purge it on mobile so it never blocks live cloud traffic!
+      if (saved != null && (saved.contains('localhost') || saved.contains('127.0.0.1'))) {
+        await prefs.remove(_serverUrlKey);
+      } else if (saved != null && saved.trim().isNotEmpty) {
+        final sanitized = _sanitizeUrl(saved.trim());
+        final ping = await pingServer(sanitized);
+        if (ping['success'] == true) {
+          _cachedBaseUrl = sanitized;
+          return;
+        }
       }
     } catch (_) {}
 
+    // First attempt connecting to live production host
+    final liveCheck = await pingServer(defaultApiUrl);
+    if (liveCheck['success'] == true) {
+      _cachedBaseUrl = defaultApiUrl;
+      return;
+    }
+
     // Auto-detect which candidate host is reachable in the background concurrently
-    await autoSwitchAliveHost();
+    final alive = await autoSwitchAliveHost();
+    _cachedBaseUrl = alive ?? defaultApiUrl;
   }
 
   /// Concurrently tests all candidate hosts and switches to the first reachable host
@@ -45,10 +64,10 @@ class NetworkConfig {
     try {
       final futures = candidateHosts.map((host) async {
         try {
-          final healthUri = Uri.parse('$host/health');
-          final response = await http.get(healthUri).timeout(const Duration(milliseconds: 600));
-          if (response.statusCode == 200) {
-            return '$host/api';
+          final sanitized = _sanitizeUrl(host);
+          final ping = await pingServer(sanitized);
+          if (ping['success'] == true) {
+            return sanitized;
           }
         } catch (_) {}
         return null;
@@ -62,18 +81,19 @@ class NetworkConfig {
         }
       }
     } catch (_) {}
-    return null;
+    _cachedBaseUrl = defaultApiUrl;
+    return _cachedBaseUrl;
   }
 
-  /// Current base URL for API requests (ends with /api)
+  /// Current base URL for API requests (guaranteed to end with /api)
   static String get baseUrl {
     if (_cachedBaseUrl != null && _cachedBaseUrl!.isNotEmpty) {
       return _cachedBaseUrl!;
     }
-    return '$defaultHost/api';
+    return defaultApiUrl;
   }
 
-  /// Current server host root (e.g., http://192.168.1.5:5000)
+  /// Current server host root (e.g., https://dadrehman.site)
   static String get serverHost {
     final base = baseUrl;
     if (base.endsWith('/api')) {
@@ -101,15 +121,19 @@ class NetworkConfig {
     } catch (_) {}
   }
 
-  /// Ensures URL begins with http:// or https:// and ends with /api
+  /// Ensures URL begins with http:// or https:// and ends with /api (preventing double /api/api)
   static String _sanitizeUrl(String input) {
     var url = input.trim();
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      url = 'http://$url';
+      url = 'https://$url';
     }
     // Remove trailing slashes
     while (url.endsWith('/')) {
       url = url.substring(0, url.length - 1);
+    }
+    // Clean any accidental duplicate /api/api
+    while (url.endsWith('/api/api')) {
+      url = url.substring(0, url.length - 4);
     }
     if (!url.endsWith('/api')) {
       url = '$url/api';
@@ -121,10 +145,8 @@ class NetworkConfig {
   /// Returns a map with { 'success': bool, 'latencyMs': int, 'message': String }
   static Future<Map<String, dynamic>> pingServer([String? testUrl]) async {
     final targetBase = testUrl != null ? _sanitizeUrl(testUrl) : baseUrl;
-    final host = targetBase.endsWith('/api')
-        ? targetBase.substring(0, targetBase.length - 4)
-        : targetBase;
-    final healthUri = Uri.parse('$host/health');
+    // The health endpoint is at ${targetBase}/health (e.g., https://dadrehman.site/api/health)
+    final healthUri = Uri.parse('$targetBase/health');
 
     final stopwatch = Stopwatch()..start();
     try {
@@ -135,14 +157,14 @@ class NetworkConfig {
           'success': true,
           'latencyMs': stopwatch.elapsedMilliseconds,
           'message': 'Connected! Latency: ${stopwatch.elapsedMilliseconds}ms',
-          'host': host,
+          'host': targetBase,
         };
       } else {
         return {
           'success': false,
           'latencyMs': stopwatch.elapsedMilliseconds,
           'message': 'HTTP ${response.statusCode}: Unexpected server response',
-          'host': host,
+          'host': targetBase,
         };
       }
     } catch (e) {
@@ -151,7 +173,7 @@ class NetworkConfig {
         'success': false,
         'latencyMs': -1,
         'message': 'Connection timed out or refused (${e.toString()})',
-        'host': host,
+        'host': targetBase,
       };
     }
   }
