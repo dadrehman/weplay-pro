@@ -340,24 +340,25 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           Column(
                             children: [
                               const SizedBox(height: 24),
-                              // ⚡ Quick 1-Tap Access (Dev)
+                              // 👑 Guaranteed Instant Direct Access for Owner & Superadmin
                               TextButton.icon(
                                 style: TextButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16),
-                                    side: BorderSide(color: AppColors.secondary.withOpacity(0.3)),
+                                    side: const BorderSide(color: Color(0xFFFFD700), width: 1.5),
                                   ),
-                                  backgroundColor: AppColors.secondary.withOpacity(0.08),
+                                  backgroundColor: const Color(0xFFFFD700).withOpacity(0.12),
                                 ),
                                 onPressed: authState.isLoading ? null : _handleQuickDevLogin,
-                                icon: const Icon(Icons.flash_on_rounded, size: 16, color: AppColors.secondary),
+                                icon: const Icon(Icons.workspace_premium_rounded, size: 18, color: Color(0xFFFFD700)),
                                 label: const Text(
                                   '⚡ Quick 1-Tap Access (Dev Superadmin)',
                                   style: TextStyle(
-                                    color: AppColors.secondary,
-                                    fontSize: 12,
+                                    color: Color(0xFFFFD700),
+                                    fontSize: 13,
                                     fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.3,
                                   ),
                                 ),
                               ),
