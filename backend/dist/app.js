@@ -21,23 +21,23 @@ const app = (0, express_1.default)();
 app.use((0, cors_1.default)({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express_1.default.json());
 // Health check endpoints
-app.get('/', (req, res) => {
+app.get(['/', '/api'], (req, res) => {
     res.status(200).json({ status: 'ok', message: 'WePlay Backend is running' });
 });
-app.get('/health', (req, res) => {
+app.get(['/health', '/api/health'], (req, res) => {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
-// API Routes
-app.use('/api/auth', auth_routes_1.default);
-app.use('/api/admin', admin_routes_1.default);
-app.use('/api/users', user_routes_1.default);
-app.use('/api/user', user_routes_1.default);
-app.use('/api/rooms', room_routes_1.default);
-app.use('/api/messages', message_routes_1.default);
-app.use('/api/friends', friend_routes_1.default);
-app.use('/api/rankings', ranking_routes_1.default);
-app.use('/api/tasks', task_routes_1.default);
-app.use('/api/events', event_routes_1.default);
+// API Routes (matching both /api/... and /... for reverse proxies)
+app.use(['/api/auth', '/auth'], auth_routes_1.default);
+app.use(['/api/admin', '/admin'], admin_routes_1.default);
+app.use(['/api/users', '/users'], user_routes_1.default);
+app.use(['/api/user', '/user'], user_routes_1.default);
+app.use(['/api/rooms', '/rooms'], room_routes_1.default);
+app.use(['/api/messages', '/messages'], message_routes_1.default);
+app.use(['/api/friends', '/friends'], friend_routes_1.default);
+app.use(['/api/rankings', '/rankings'], ranking_routes_1.default);
+app.use(['/api/tasks', '/tasks'], task_routes_1.default);
+app.use(['/api/events', '/events'], event_routes_1.default);
 // 404 Handler
 app.use((req, res) => {
     res.status(404).json({ error: 'Endpoint not found' });

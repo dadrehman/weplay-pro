@@ -76,12 +76,17 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                 ),
                                 onPressed: () => _showServerConfigDialog(context),
                                 icon: const Icon(Icons.settings_ethernet_rounded, size: 16, color: AppColors.secondary),
-                                label: Text(
-                                  _shortHost(NetworkConfig.serverHost),
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.textSecondary,
-                                    fontWeight: FontWeight.w600,
+                                label: ConstrainedBox(
+                                  constraints: const BoxConstraints(maxWidth: 160),
+                                  child: Text(
+                                    _shortHost(NetworkConfig.serverHost),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.textSecondary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -621,7 +626,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   String _shortHost(String host) {
     try {
       final uri = Uri.parse(host);
-      return '${uri.host}:${uri.port}';
+      if (uri.host.contains('b4a.run') || uri.host.contains('onrender.com')) {
+        return 'Cloud Server ☁️';
+      }
+      if (uri.hasPort && uri.port != 80 && uri.port != 443) {
+        return '${uri.host}:${uri.port}';
+      }
+      return uri.host.length > 16 ? '${uri.host.substring(0, 14)}...' : uri.host;
     } catch (_) {
       return 'Server IP';
     }

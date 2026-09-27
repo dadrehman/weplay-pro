@@ -20,24 +20,24 @@ app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express.json());
 
 // Health check endpoints
-app.get('/', (req: Request, res: Response) => {
+app.get(['/', '/api'], (req: Request, res: Response) => {
   res.status(200).json({ status: 'ok', message: 'WePlay Backend is running' });
 });
-app.get('/health', (req: Request, res: Response) => {
+app.get(['/health', '/api/health'], (req: Request, res: Response) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/user', userRoutes);
-app.use('/api/rooms', roomRoutes);
-app.use('/api/messages', messageRoutes);
-app.use('/api/friends', friendRoutes);
-app.use('/api/rankings', rankingRoutes);
-app.use('/api/tasks', taskRoutes);
-app.use('/api/events', eventRoutes);
+// API Routes (matching both /api/... and /... for reverse proxies)
+app.use(['/api/auth', '/auth'], authRoutes);
+app.use(['/api/admin', '/admin'], adminRoutes);
+app.use(['/api/users', '/users'], userRoutes);
+app.use(['/api/user', '/user'], userRoutes);
+app.use(['/api/rooms', '/rooms'], roomRoutes);
+app.use(['/api/messages', '/messages'], messageRoutes);
+app.use(['/api/friends', '/friends'], friendRoutes);
+app.use(['/api/rankings', '/rankings'], rankingRoutes);
+app.use(['/api/tasks', '/tasks'], taskRoutes);
+app.use(['/api/events', '/events'], eventRoutes);
 
 
 // 404 Handler

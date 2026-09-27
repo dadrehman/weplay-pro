@@ -13,21 +13,17 @@ class NetworkConfig {
 
   /// Candidate hosts to connect mobile client to backend
   static const List<String> candidateHosts = [
-    'http://127.0.0.1:5000',     // ADB reverse forwarded (instant & bypasses Windows Firewall)
-    'http://10.0.2.2:5000',      // Android Emulator loopback
-    'http://172.27.192.1:5000',  // MEmu / Hyper-V Virtual Switch Host
-    'http://192.168.0.106:5000', // Host Wi-Fi IP (Physical Android/iOS)
-    'http://localhost:5000',     // Localhost / Web / Desktop
+    'https://dadrehman.site/api',         // Live Production Backend (cPanel)
+    'https://weplaypro-4r3f8n3v.b4a.run', // Live Cloud Backend Backup
+    'http://127.0.0.1:5000',             // ADB reverse forwarded (instant & bypasses Windows Firewall)
+    'http://10.0.2.2:5000',              // Android Emulator loopback
+    'http://172.27.192.1:5000',          // MEmu / Hyper-V Virtual Switch Host
+    'http://192.168.0.106:5000',         // Host Wi-Fi IP (Physical Android/iOS)
+    'http://localhost:5000',             // Localhost / Web / Desktop
   ];
 
   /// Default host detection:
-  static String get defaultHost {
-    if (!kIsWeb && Platform.isAndroid) {
-      // 127.0.0.1 works via adb reverse; 10.0.2.2 works on emulator
-      return 'http://127.0.0.1:5000';
-    }
-    return 'http://localhost:5000';
-  }
+  static String get defaultHost => 'https://dadrehman.site/api';
 
   /// Initialize and load saved server URL from SharedPreferences or auto-detect alive host
   static Future<void> init() async {
