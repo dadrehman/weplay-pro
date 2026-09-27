@@ -150,7 +150,7 @@ class NetworkConfig {
 
     final stopwatch = Stopwatch()..start();
     try {
-      final response = await http.get(healthUri).timeout(const Duration(seconds: 4));
+      final response = await http.get(healthUri).timeout(const Duration(seconds: 15));
       stopwatch.stop();
       if (response.statusCode == 200) {
         return {

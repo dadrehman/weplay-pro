@@ -96,7 +96,7 @@ class ApiClient {
       final headers = await _headers();
       final response = await http
           .get(Uri.parse(url), headers: headers)
-          .timeout(const Duration(seconds: 4));
+          .timeout(const Duration(seconds: 20));
       return _handleResponse(response);
     } catch (e) {
       if (e is ApiException) rethrow;
@@ -109,7 +109,7 @@ class ApiClient {
           final headers = await _headers();
           final response = await http
               .get(Uri.parse(retryUrl), headers: headers)
-              .timeout(const Duration(seconds: 3));
+              .timeout(const Duration(seconds: 15));
           return _handleResponse(response);
         } catch (_) {}
       }
@@ -127,7 +127,7 @@ class ApiClient {
             headers: headers,
             body: jsonEncode(body),
           )
-          .timeout(const Duration(seconds: 4));
+          .timeout(const Duration(seconds: 20));
       return _handleResponse(response);
     } catch (e) {
       if (e is ApiException) rethrow;
@@ -144,7 +144,7 @@ class ApiClient {
                 headers: headers,
                 body: jsonEncode(body),
               )
-              .timeout(const Duration(seconds: 3));
+              .timeout(const Duration(seconds: 15));
           return _handleResponse(response);
         } catch (_) {}
       }
@@ -162,7 +162,7 @@ class ApiClient {
             headers: headers,
             body: jsonEncode(body),
           )
-          .timeout(const Duration(seconds: 4));
+          .timeout(const Duration(seconds: 20));
       return _handleResponse(response);
     } catch (e) {
       if (e is ApiException) rethrow;
@@ -179,7 +179,7 @@ class ApiClient {
                 headers: headers,
                 body: jsonEncode(body),
               )
-              .timeout(const Duration(seconds: 3));
+              .timeout(const Duration(seconds: 15));
           return _handleResponse(response);
         } catch (_) {}
       }
