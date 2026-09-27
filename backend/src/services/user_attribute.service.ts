@@ -274,7 +274,7 @@ export class UserAttributeService {
       });
 
       return updatedUser;
-    }).then(async (user) => {
+    }, { maxWait: 30000, timeout: 60000 }).then(async (user) => {
       const fullProfile = await this.getFullProfile(user.id);
 
       // Emit real-time WebSocket update to user room

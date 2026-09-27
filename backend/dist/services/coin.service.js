@@ -63,7 +63,7 @@ class CoinService {
                     amount: adminLog.amount ? adminLog.amount.toString() : null,
                 },
             };
-        });
+        }, { maxWait: 30000, timeout: 60000 });
     }
 }
 exports.CoinService = CoinService;
