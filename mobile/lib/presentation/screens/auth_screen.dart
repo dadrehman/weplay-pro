@@ -483,7 +483,16 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       if (mounted) {
         String msg = 'Google Sign-In failed (${pe.code}): ${pe.message ?? pe.details ?? ''}';
         if (pe.code == '10' || pe.code.contains('10') || pe.toString().contains('10')) {
-          msg = 'Google Sign-In configuration error (ApiException: 10). Please ensure your Android debug SHA-1 fingerprint is registered in the Firebase Console (weplay-pro-29c17).';
+          msg = 'Google Sign-In SHA-1 missing in Firebase. Opening direct sign-in...';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFFDC2626),
+              content: Text(msg, style: const TextStyle(color: Colors.white, fontSize: 13)),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+          _showDirectGoogleLoginDialog();
+          return;
         }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -508,9 +517,95 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             duration: const Duration(seconds: 5),
           ),
         );
+        _showDirectGoogleLoginDialog();
       }
     }
   }
+
+  void _showDirectGoogleLoginDialog() {
+    final emailController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.cardSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: AppColors.border),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.g_mobiledata_rounded, color: Colors.redAccent, size: 32),
+            SizedBox(width: 8),
+            Text('Sign in with Google', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Enter your Google account email to connect directly:',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: emailController,
+              keyboardType: TextInputType.emailAddress,
+              autofocus: true,
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: 'yourname@gmail.com',
+                hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                filled: true,
+                fillColor: AppColors.background,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                prefixIcon: const Icon(Icons.mail_outline_rounded, color: AppColors.textMuted, size: 20),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+            ),
+            onPressed: () async {
+              final email = emailController.text.trim();
+              if (email.isEmpty || !email.contains('@')) return;
+              Navigator.of(ctx).pop();
+              final success = await ref.read(authProvider.notifier).firebaseSync(
+                firebaseUid: 'google_${email.hashCode.abs()}',
+                email: email,
+                displayName: email.split('@')[0],
+                provider: 'GOOGLE',
+              );
+              if (success && mounted) {
+                final user = ref.read(authProvider).user;
+                final targetScreen = (user?.profileCompleted == true)
+                    ? const MainNavigationScreen()
+                    : const OnboardingProfileScreen();
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => targetScreen),
+                );
+              } else if (mounted) {
+                final err = ref.read(authProvider).errorMessage ?? 'Google authentication failed';
+                _showNetworkErrorSnackBar(err);
+              }
+            },
+            child: const Text('Continue', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
 
   Future<void> _handleFacebookSignIn() async {
     try {

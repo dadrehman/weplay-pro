@@ -947,7 +947,7 @@ class AuthController {
         }
         catch (error) {
             console.error('Google Auth Error:', error);
-            res.status(500).json({ error: 'Failed to authenticate with Google' });
+            res.status(500).json({ error: error.message || 'Failed to authenticate with Google' });
         }
     }
     /**

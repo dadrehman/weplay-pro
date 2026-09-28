@@ -60,9 +60,9 @@ class ApiClient {
     }
 
     if (response.statusCode == 401) {
-      clearToken();
       throw UnauthorizedException(body['error'] ?? 'Session expired. Please sign in again.');
     }
+
 
     if (response.statusCode == 403) {
       final errorMsg = body['error'] ?? 'Access forbidden';
