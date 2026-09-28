@@ -19,6 +19,7 @@ class SocketService {
   final _speakingStateController = StreamController<Map<String, dynamic>>.broadcast();
   final _announcementController = StreamController<Map<String, dynamic>>.broadcast();
   final _sessionTerminatedController = StreamController<Map<String, dynamic>>.broadcast();
+  final _coinsUpdatedController = StreamController<Map<String, dynamic>>.broadcast();
 
   Stream<Map<String, dynamic>> get roomCreatedStream => _roomCreatedController.stream;
   Stream<Map<String, dynamic>> get messageReceivedStream => _messageReceivedController.stream;
@@ -26,6 +27,7 @@ class SocketService {
   Stream<Map<String, dynamic>> get speakingStateStream => _speakingStateController.stream;
   Stream<Map<String, dynamic>> get announcementStream => _announcementController.stream;
   Stream<Map<String, dynamic>> get sessionTerminatedStream => _sessionTerminatedController.stream;
+  Stream<Map<String, dynamic>> get coinsUpdatedStream => _coinsUpdatedController.stream;
 
   bool get isConnected => _isConnected;
 
@@ -122,6 +124,13 @@ class SocketService {
           _sessionTerminatedController.add(Map<String, dynamic>.from(data));
         } else {
           _sessionTerminatedController.add({'reason': 'Your session has been terminated by an administrator.'});
+        }
+      });
+
+      // 7. Authoritative dynamic coin balance update
+      _socket!.on('coins_updated', (data) {
+        if (data is Map) {
+          _coinsUpdatedController.add(Map<String, dynamic>.from(data));
         }
       });
 

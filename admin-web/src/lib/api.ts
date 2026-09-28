@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://dadrehman.site';
 
 export interface CharmTierInfo {
   tier: 'STAR' | 'DIAMOND' | 'CROWN';
@@ -155,11 +155,11 @@ export function removeAuthToken(): void {
 }
 
 const CANDIDATE_API_BASES = [
-  'http://localhost:5000',
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000',
   'https://dadrehman.site',
+  process.env.NEXT_PUBLIC_API_URL || 'https://dadrehman.site',
+  'http://localhost:5000',
 ];
-let activeApiBase = 'http://localhost:5000';
+let activeApiBase = 'https://dadrehman.site';
 
 export async function apiFetch<T>(
   endpoint: string,

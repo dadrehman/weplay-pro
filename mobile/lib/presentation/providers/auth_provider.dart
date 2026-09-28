@@ -339,6 +339,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
     return verifyWhatsAppOtp(phone: phone, code: code);
   }
 
+  void updateCoinsBalance(dynamic newBalance) {
+    if (state.user != null) {
+      final updatedUser = state.user!.copyWith(coinsBalance: newBalance.toString());
+      state = state.copyWith(user: updatedUser);
+    }
+  }
+
   Future<void> refreshProfile() async {
     try {
       final user = await _authService.getProfile();

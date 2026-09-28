@@ -23,6 +23,7 @@ class MainNavigationScreen extends ConsumerStatefulWidget {
 class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   late int _currentIndex;
   StreamSubscription? _sessionSubscription;
+  StreamSubscription? _coinsSubscription;
 
   @override
   void initState() {
@@ -33,8 +34,18 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     if (!WidgetsBinding.instance.toString().contains('TestWidgetsFlutterBinding')) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         SocketService().connect();
+        ref.read(authProvider.notifier).refreshProfile();
       });
     }
+
+    // Real-time authoritative coins balance update
+    _coinsSubscription = SocketService().coinsUpdatedStream.listen((event) {
+      if (!mounted) return;
+      final newBalance = event['newBalance'];
+      if (newBalance != null) {
+        ref.read(authProvider.notifier).updateCoinsBalance(newBalance);
+      }
+    });
 
     // Real-time Session Termination Sync (Account soft-delete/purge)
     _sessionSubscription = SocketService().sessionTerminatedStream.listen((event) {
@@ -93,6 +104,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
 
   @override
   void dispose() {
+    _coinsSubscription?.cancel();
     _sessionSubscription?.cancel();
     super.dispose();
   }

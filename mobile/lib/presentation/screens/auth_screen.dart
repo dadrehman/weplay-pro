@@ -61,37 +61,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Top Bar with Server Config Button
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              TextButton.icon(
-                                style: TextButton.styleFrom(
-                                  backgroundColor: AppColors.cardSurface.withOpacity(0.7),
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                    side: BorderSide(color: AppColors.border.withOpacity(0.5)),
-                                  ),
-                                ),
-                                onPressed: () => _showServerConfigDialog(context),
-                                icon: const Icon(Icons.settings_ethernet_rounded, size: 16, color: AppColors.secondary),
-                                label: ConstrainedBox(
-                                  constraints: const BoxConstraints(maxWidth: 160),
-                                  child: Text(
-                                    _shortHost(NetworkConfig.serverHost),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.textSecondary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                          const SizedBox(height: 12),
 
                           // Center Branding & Mascot
                           Column(
@@ -481,129 +451,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
     } on PlatformException catch (pe) {
       if (mounted) {
-        String msg = 'Google Sign-In failed (${pe.code}): ${pe.message ?? pe.details ?? ''}';
-        if (pe.code == '10' || pe.code.contains('10') || pe.toString().contains('10')) {
-          msg = 'Google Sign-In SHA-1 missing in Firebase. Opening direct sign-in...';
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: const Color(0xFFDC2626),
-              content: Text(msg, style: const TextStyle(color: Colors.white, fontSize: 13)),
-              duration: const Duration(seconds: 3),
-            ),
-          );
-          _showDirectGoogleLoginDialog();
-          return;
-        }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFFDC2626),
-            content: Text(
-              msg,
-              style: const TextStyle(color: Colors.white, fontSize: 13),
-            ),
-            duration: const Duration(seconds: 7),
-          ),
-        );
+        final msg = 'Google Sign-In failed (${pe.code}): ${pe.message ?? pe.details ?? 'Unable to complete Google authentication'}';
+        _showNetworkErrorSnackBar(msg);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFFDC2626),
-            content: Text(
-              'Google Sign-In failed: ${e.toString().replaceAll('Exception: ', '')}',
-              style: const TextStyle(color: Colors.white, fontSize: 13),
-            ),
-            duration: const Duration(seconds: 5),
-          ),
-        );
-        _showDirectGoogleLoginDialog();
+        _showNetworkErrorSnackBar('Google Sign-In failed: ${e.toString().replaceAll('Exception: ', '')}');
       }
     }
-  }
-
-  void _showDirectGoogleLoginDialog() {
-    final emailController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.cardSurface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: AppColors.border),
-        ),
-        title: const Row(
-          children: [
-            Icon(Icons.g_mobiledata_rounded, color: Colors.redAccent, size: 32),
-            SizedBox(width: 8),
-            Text('Sign in with Google', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Enter your Google account email to connect directly:',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: emailController,
-              keyboardType: TextInputType.emailAddress,
-              autofocus: true,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-              decoration: InputDecoration(
-                hintText: 'yourname@gmail.com',
-                hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
-                filled: true,
-                fillColor: AppColors.background,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                prefixIcon: const Icon(Icons.mail_outline_rounded, color: AppColors.textMuted, size: 20),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.black,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-            ),
-            onPressed: () async {
-              final email = emailController.text.trim();
-              if (email.isEmpty || !email.contains('@')) return;
-              Navigator.of(ctx).pop();
-              final success = await ref.read(authProvider.notifier).firebaseSync(
-                firebaseUid: 'google_${email.hashCode.abs()}',
-                email: email,
-                displayName: email.split('@')[0],
-                provider: 'GOOGLE',
-              );
-              if (success && mounted) {
-                final user = ref.read(authProvider).user;
-                final targetScreen = (user?.profileCompleted == true)
-                    ? const MainNavigationScreen()
-                    : const OnboardingProfileScreen();
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => targetScreen),
-                );
-              } else if (mounted) {
-                final err = ref.read(authProvider).errorMessage ?? 'Google authentication failed';
-                _showNetworkErrorSnackBar(err);
-              }
-            },
-            child: const Text('Continue', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
   }
 
 
@@ -692,16 +547,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         backgroundColor: AppColors.error,
         content: Text(
           errMsg.contains('SocketException') || errMsg.contains('Failed host lookup')
-              ? 'Network Error: Cannot connect to server at ${NetworkConfig.serverHost}. Tap to configure.'
+              ? 'Unable to connect to WePlay cloud server. Please check your internet connection.'
               : errMsg,
-          style: const TextStyle(color: Colors.white, fontSize: 12),
+          style: const TextStyle(color: Colors.white, fontSize: 13),
         ),
-        action: SnackBarAction(
-          label: 'Server IP',
-          textColor: Colors.yellowAccent,
-          onPressed: () => _showServerConfigDialog(context),
-        ),
-        duration: const Duration(seconds: 6),
+        duration: const Duration(seconds: 4),
       ),
     );
   }
@@ -717,168 +567,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
       );
     }
-  }
-
-  String _shortHost(String host) {
-    try {
-      final uri = Uri.parse(host);
-      if (uri.host.contains('b4a.run') || uri.host.contains('onrender.com')) {
-        return 'Cloud Server ☁️';
-      }
-      if (uri.hasPort && uri.port != 80 && uri.port != 443) {
-        return '${uri.host}:${uri.port}';
-      }
-      return uri.host.length > 16 ? '${uri.host.substring(0, 14)}...' : uri.host;
-    } catch (_) {
-      return 'Server IP';
-    }
-  }
-
-  // ================= SERVER IP CONFIG MODAL =================
-  void _showServerConfigDialog(BuildContext context) {
-    final controller = TextEditingController(text: NetworkConfig.serverHost);
-    String? pingResult;
-    bool isPinging = false;
-    bool isSuccess = false;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: AppColors.cardSurface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: const BorderSide(color: AppColors.border),
-          ),
-          title: const Row(
-            children: [
-              Icon(Icons.router_rounded, color: AppColors.secondary, size: 22),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Server IP & Network',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Enter backend host machine Wi-Fi IP or emulator host address to connect mobile without timeouts.',
-                style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.4),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: controller,
-                style: const TextStyle(color: Colors.white, fontSize: 13, fontFamily: 'monospace'),
-                decoration: InputDecoration(
-                  labelText: 'Host IP or Domain',
-                  labelStyle: const TextStyle(color: AppColors.textMuted, fontSize: 12),
-                  hintText: 'e.g. http://192.168.1.100:5000',
-                  hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 12),
-                  filled: true,
-                  fillColor: AppColors.background,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  prefixIcon: const Icon(Icons.link_rounded, color: AppColors.secondary, size: 18),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Ping Server Diagnostic Button
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: AppColors.secondary.withOpacity(0.5)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                      ),
-                      onPressed: isPinging
-                          ? null
-                          : () async {
-                              setDialogState(() {
-                                isPinging = true;
-                                pingResult = 'Testing connection...';
-                              });
-                              final res = await NetworkConfig.pingServer(controller.text);
-                              setDialogState(() {
-                                isPinging = false;
-                                isSuccess = res['success'] as bool;
-                                pingResult = res['message'] as String;
-                              });
-                            },
-                      icon: isPinging
-                          ? const SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.secondary),
-                            )
-                          : const Icon(Icons.bolt_rounded, size: 16, color: AppColors.secondary),
-                      label: const Text(
-                        'Ping Server',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.secondary),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              // Ping Results Banner
-              if (pingResult != null) ...[
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: isSuccess ? const Color(0xFF10B981).withOpacity(0.15) : AppColors.error.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: isSuccess ? Colors.greenAccent.withOpacity(0.3) : AppColors.error.withOpacity(0.3),
-                    ),
-                  ),
-                  child: Text(
-                    pingResult!,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: isSuccess ? Colors.greenAccent : AppColors.error,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                NetworkConfig.resetToDefault().then((_) {
-                  if (mounted) setState(() {});
-                });
-              },
-              child: const Text('Reset Default', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: () {
-                final text = controller.text;
-                Navigator.pop(ctx);
-                NetworkConfig.setCustomServerUrl(text).then((_) {
-                  if (mounted) setState(() {});
-                });
-              },
-              child: const Text('Save & Use', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   // ================= WHATSAPP OTP BOTTOM SHEET =================

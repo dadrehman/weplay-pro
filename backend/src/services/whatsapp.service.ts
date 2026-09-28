@@ -148,6 +148,7 @@ class WhatsAppService {
     const templateLang = process.env.META_WHATSAPP_TEMPLATE_LANG || 'en_US';
 
     let delivered = false;
+    let metaErrorMessage: string | null = null;
 
     // 3. Try Meta Cloud API (skipped during unit tests)
     if (metaToken && metaPhoneId && process.env.NODE_ENV !== 'test') {
@@ -155,15 +156,9 @@ class WhatsAppService {
       console.log(`\n[WhatsAppService] Sending OTP to ${recipientE164} via template "${templateName}" (${templateLang})...`);
 
       // Build template payload.
-      // The "authentication" template category automatically includes the OTP via
-      // a button component. Some templates use body {{1}} instead.
-      // We support BOTH patterns here:
-      //   • If templateName === "authentication" (Meta built-in):  use button component
-      //   • Otherwise: use body component parameter
       let templateComponents: any[];
 
       if (templateName === 'authentication') {
-        // Meta's built-in authentication template uses a "url" button with the OTP
         templateComponents = [
           {
             type: 'body',
@@ -177,7 +172,6 @@ class WhatsAppService {
           },
         ];
       } else {
-        // Custom template with {{1}} variable in the body
         templateComponents = [
           {
             type: 'body',
@@ -221,6 +215,7 @@ class WhatsAppService {
         const errCode = errorData?.code;
         const errType = errorData?.type;
         const errMsg = errorData?.message || err.message;
+        metaErrorMessage = errMsg;
 
         console.error('\n==================== [META WHATSAPP API ERROR] ====================');
         console.error('HTTP Status :', err.response?.status);
@@ -234,44 +229,36 @@ class WhatsAppService {
         if (errCode === 190 || errType === 'OAuthException') {
           console.error('\n>>> [FIX 190] Meta token EXPIRED or INVALID.');
           console.error('    Action: Go to Meta Business Manager → System Users → Generate a PERMANENT token.');
-          console.error('    Or get a fresh 24h token from Developers Dashboard → WhatsApp → API Setup.');
         } else if (errCode === 131030) {
           console.error('\n>>> [FIX 131030] Recipient is NOT whitelisted (App in Development mode).');
-          console.error('    Action 1 (Quick): Add', recipientE164, 'to test recipients in Meta Developers Dashboard → WhatsApp → API Setup → "To" field.');
-          console.error('    Action 2 (Permanent): Complete Business Verification + App Review → go LIVE to send to any number.');
         } else if (errCode === 132000 || errCode === 132001) {
           console.error('\n>>> [FIX 132000/132001] Template not found or not approved.');
-          console.error('    Template name used:', templateName, '| Lang:', templateLang);
-          console.error('    Action: Check Meta Business Manager → WhatsApp → Message Templates.');
-          console.error('    Ensure the template is APPROVED and update META_WHATSAPP_TEMPLATE_NAME in .env.');
-        } else if (errCode === 131047) {
-          console.error('\n>>> [FIX 131047] 24h messaging window expired.');
-          console.error('    Action: Use an approved template message (which you are). Check template status.');
-        } else if (errCode === 100) {
-          console.error('\n>>> [FIX 100] Invalid parameter — phone format or template component mismatch.');
-          console.error('    Phone sent:', recipientE164, '(must be E.164 digits, no + prefix)');
-          console.error('    Verify template components match the approved template definition.');
         }
 
         console.error('====================================================================\n');
       }
     }
 
-    // 4. Console log for dev visibility (always shown)
+    // 4. Console log for visibility
     console.log('\n================== [WHATSAPP OTP DISPATCH] ==================');
     console.log(`📱 Recipient:       ${phone}`);
     console.log(`🔑 OTP Code:        ${code}`);
     console.log(`⏳ Expires in:      5 minutes`);
-    console.log(`🚀 Delivered:       ${delivered ? 'YES (Meta Cloud API)' : 'NO (check errors above)'}`);
+    console.log(`🚀 Delivered:       ${delivered ? 'YES (Meta Cloud API)' : 'NO'}`);
     console.log('=============================================================\n');
+
+    if (!delivered && metaToken && metaPhoneId && process.env.NODE_ENV !== 'test') {
+      throw new Error(
+        metaErrorMessage
+          ? `Meta WhatsApp API error: ${metaErrorMessage}`
+          : 'Could not deliver WhatsApp message via Meta Cloud API.'
+      );
+    }
 
     return {
       success: true,
-      message: delivered
-        ? `Verification code sent to your WhatsApp`
-        : `Verification code generated for WhatsApp (Test code: ${code} or master code: 123456)`,
+      message: 'Verification code sent to your WhatsApp',
       expiresInSeconds: 300,
-      devOtp: code,
     };
   }
 
