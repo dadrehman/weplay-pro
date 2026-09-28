@@ -1,13 +1,5 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=${DEPLOYPATH:-$HOME/api}
-    - /bin/mkdir -p $DEPLOYPATH/tmp
-    - /bin/cp -R backend/dist $DEPLOYPATH/
-    - /bin/cp backend/app.js $DEPLOYPATH/
-    - /bin/cp backend/package.json $DEPLOYPATH/
-    - /bin/cp backend/package-lock.json $DEPLOYPATH/
-    - /bin/cp -R backend/prisma $DEPLOYPATH/
-    - /bin/touch $DEPLOYPATH/tmp/restart.txt
-    - export ALT_TARGETS=("$HOME/public_html/api" "$HOME/backend" "$HOME/weplay-api" "$HOME/weplay-pro/backend")
-    - for TARGET in "${ALT_TARGETS[@]}"; do if [ -d "$TARGET" ] && [ "$TARGET" != "$DEPLOYPATH" ]; then /bin/cp -R backend/dist "$TARGET/"; /bin/cp backend/app.js "$TARGET/"; /bin/cp backend/package.json "$TARGET/"; /bin/cp backend/package-lock.json "$TARGET/"; /bin/cp -R backend/prisma "$TARGET/"; /bin/mkdir -p "$TARGET/tmp"; /bin/touch "$TARGET/tmp/restart.txt"; fi; done
+    - /bin/mkdir -p backend/tmp
+    - /bin/touch backend/tmp/restart.txt
