@@ -66,5 +66,19 @@ process.on('unhandledRejection', (reason) => {
   }
 })();
 
+// Non-destructive safe database schema check on startup
+(async function verifyDatabaseSchema() {
+  try {
+    const { PrismaClient } = require('@prisma/client');
+    const prisma = new PrismaClient();
+    await prisma.$queryRaw`SELECT 1 FROM "User" LIMIT 1`;
+    console.log('[WePlay] Database schema verified: "User" table exists.');
+    await prisma.$disconnect();
+  } catch (err) {
+    console.warn('[WePlay] Database schema check note:', err?.message || err);
+  }
+})();
+
 require('dotenv').config();
 require('./dist/server.js');
+

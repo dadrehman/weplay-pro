@@ -16,18 +16,51 @@ const friend_routes_1 = __importDefault(require("./routes/friend.routes"));
 const ranking_routes_1 = __importDefault(require("./routes/ranking.routes"));
 const task_routes_1 = __importDefault(require("./routes/task.routes"));
 const event_routes_1 = __importDefault(require("./routes/event.routes"));
+const build_info_1 = require("./build_info");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 // Middlewares
 app.use((0, cors_1.default)({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express_1.default.json());
-// Health check endpoints
-app.get(['/', '/api'], (req, res) => {
-    res.status(200).json({ status: 'ok', message: 'WePlay Backend is running' });
-});
-app.get(['/health', '/api/health'], (req, res) => {
-    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+// Public Health & Deployment Verification Handler
+const healthHandler = async (req, res) => {
+    let dbConnected = false;
+    try {
+        await prisma_1.default.$queryRaw `SELECT 1`;
+        dbConnected = true;
+    }
+    catch (_) {
+        dbConnected = false;
+    }
+    const isDbUrlSet = Boolean(process.env.DATABASE_URL && process.env.DATABASE_URL.trim().length > 0);
+    const isJwtSet = Boolean(process.env.JWT_SECRET && process.env.JWT_SECRET.trim().length > 0);
+    const isMetaTokenSet = Boolean(process.env.META_WHATSAPP_TOKEN && process.env.META_WHATSAPP_TOKEN.trim().length > 0);
+    const isMetaPhoneIdSet = Boolean((process.env.META_WHATSAPP_PHONE_NUMBER_ID && process.env.META_WHATSAPP_PHONE_NUMBER_ID.trim().length > 0) ||
+        (process.env.META_PHONE_NUMBER_ID && process.env.META_PHONE_NUMBER_ID.trim().length > 0));
+    const isGoogleClientIdSet = Boolean((process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_ID.trim().length > 0) ||
+        (process.env.GOOGLE_SERVER_CLIENT_ID && process.env.GOOGLE_SERVER_CLIENT_ID.trim().length > 0));
+    const isFirebaseServiceAccountSet = Boolean((process.env.FIREBASE_SERVICE_ACCOUNT && process.env.FIREBASE_SERVICE_ACCOUNT.trim().length > 0) ||
+        (process.env.FIREBASE_SERVICE_ACCOUNT_KEY && process.env.FIREBASE_SERVICE_ACCOUNT_KEY.trim().length > 0) ||
+        (process.env.FIREBASE_ADMIN_CREDENTIALS && process.env.FIREBASE_ADMIN_CREDENTIALS.trim().length > 0));
+    const status = dbConnected && isDbUrlSet && isJwtSet ? 'ok' : (dbConnected ? 'degraded' : 'error');
+    res.status(status === 'error' ? 503 : 200).json({
+        status,
+        buildId: build_info_1.BUILD_ID,
+        nodeVersion: process.version,
+        uptimeSeconds: Math.floor(process.uptime()),
+        pid: process.pid,
+        dbConnected,
+        env: {
+            JWT_SECRET: isJwtSet ? 'set' : 'missing',
+            META_WHATSAPP_TOKEN: isMetaTokenSet ? 'set' : 'missing',
+            META_WHATSAPP_PHONE_NUMBER_ID: isMetaPhoneIdSet ? 'set' : 'missing',
+            GOOGLE_CLIENT_ID: isGoogleClientIdSet ? 'set' : 'missing',
+            FIREBASE_SERVICE_ACCOUNT: isFirebaseServiceAccountSet ? 'set' : 'missing',
+            DATABASE_URL: isDbUrlSet ? 'set' : 'missing',
+        },
+    });
+};
+app.get(['/health', '/api/health', '/', '/api'], healthHandler);
 // Meta Developer Compliance Endpoints (Privacy Policy, Terms, Data Deletion)
 app.get(['/privacy', '/api/privacy', '/privacy-policy', '/api/privacy-policy'], (req, res) => {
     res.setHeader('Content-Type', 'text/html');

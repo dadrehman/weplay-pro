@@ -4,7 +4,7 @@
   "description": "WePlay-Pro Backend API & Real-time Server",
   "main": "dist/server.js",
   "scripts": {
-    "build": "prisma generate && tsc",
+    "build": "node scripts/generate_build_info.js && prisma generate && tsc",
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "prisma:generate": "prisma generate",
