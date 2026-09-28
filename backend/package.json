@@ -6,7 +6,6 @@
   "scripts": {
     "build": "node scripts/generate_build_info.js && prisma generate && tsc",
     "start": "node dist/server.js",
-    "postinstall": "prisma generate",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
