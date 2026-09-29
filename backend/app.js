@@ -1,22 +1,32 @@
 const fs = require('fs');
 const path = require('path');
+const Module = require('module');
 
-// 1. Explicitly register nodevenv and local paths so LiteSpeed lsnode always finds all modules
-const venvModules = '/home/dadrehman/nodevenv/weplay-code/backend/20/lib/node_modules';
-if (fs.existsSync(venvModules) && !module.paths.includes(venvModules)) {
-  module.paths.unshift(venvModules);
-}
+// 1. Bulletproof module resolution fallback to cPanel virtual environment
+const venvPath = '/home/dadrehman/nodevenv/weplay-code/backend/20/lib/node_modules';
 const localModules = path.join(__dirname, 'node_modules');
-if (fs.existsSync(localModules) && !module.paths.includes(localModules)) {
-  module.paths.unshift(localModules);
-}
 
-// 2. Safe dotenv loader
+const origResolve = Module._resolveFilename;
+Module._resolveFilename = function(request, parent, isMain, options) {
+  try {
+    return origResolve.call(this, request, parent, isMain, options);
+  } catch (err) {
+    if (err.code === 'MODULE_NOT_FOUND') {
+      const opts = Object.assign({}, options);
+      const searchPaths = [localModules, venvPath].concat(opts.paths || []);
+      opts.paths = searchPaths;
+      return origResolve.call(this, request, parent, isMain, opts);
+    }
+    throw err;
+  }
+};
+
+// 2. Load .env file
 try {
   const dotenv = require('dotenv');
   dotenv.config({ path: path.join(__dirname, '.env') });
-} catch (err) {
-  console.warn('[WePlay Boot] dotenv note:', err.message);
+} catch (e) {
+  console.warn('[WePlay Boot] dotenv note:', e.message);
 }
 
 // 3. Database URL Neon connection pooler configuration
