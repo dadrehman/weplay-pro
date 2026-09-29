@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -25,12 +58,14 @@ app.use(express_1.default.json());
 // Public Health & Deployment Verification Handler
 const healthHandler = async (req, res) => {
     let dbConnected = false;
+    let dbError = null;
     try {
         await prisma_1.default.$queryRaw `SELECT 1`;
         dbConnected = true;
     }
-    catch (_) {
+    catch (err) {
         dbConnected = false;
+        dbError = err?.message || String(err);
     }
     const isDbUrlSet = Boolean(process.env.DATABASE_URL && process.env.DATABASE_URL.trim().length > 0);
     const isJwtSet = Boolean(process.env.JWT_SECRET && process.env.JWT_SECRET.trim().length > 0);
@@ -50,6 +85,7 @@ const healthHandler = async (req, res) => {
         uptimeSeconds: Math.floor(process.uptime()),
         pid: process.pid,
         dbConnected,
+        dbError: dbConnected ? null : dbError,
         env: {
             JWT_SECRET: isJwtSet ? 'set' : 'missing',
             META_WHATSAPP_TOKEN: isMetaTokenSet ? 'set' : 'missing',
@@ -61,6 +97,37 @@ const healthHandler = async (req, res) => {
     });
 };
 app.get(['/health', '/api/health', '/', '/api'], healthHandler);
+// One-click Web Trigger to initialize/generate Prisma Client on Linux without SSH/Terminal
+app.get(['/setup-prisma', '/api/setup-prisma', '/api/admin/generate-prisma'], async (req, res) => {
+    try {
+        const { exec } = await Promise.resolve().then(() => __importStar(require('child_process')));
+        const path = await Promise.resolve().then(() => __importStar(require('path')));
+        const cwd = path.resolve(__dirname, '..');
+        const nodeBin = process.execPath;
+        const cliPath = path.join(cwd, 'node_modules', 'prisma', 'build', 'index.js');
+        const schemaPath = path.join(cwd, 'prisma', 'schema.prisma');
+        const cmd = `"${nodeBin}" "${cliPath}" generate --schema="${schemaPath}"`;
+        exec(cmd, { cwd, timeout: 60000, env: process.env }, (error, stdout, stderr) => {
+            if (error) {
+                return res.status(500).json({
+                    success: false,
+                    error: error.message,
+                    stdout,
+                    stderr,
+                });
+            }
+            return res.status(200).json({
+                success: true,
+                message: 'Prisma Client successfully generated on server! Please restart the app in cPanel.',
+                stdout,
+                stderr,
+            });
+        });
+    }
+    catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
 // Meta Developer Compliance Endpoints (Privacy Policy, Terms, Data Deletion)
 app.get(['/privacy', '/api/privacy', '/privacy-policy', '/api/privacy-policy'], (req, res) => {
     res.setHeader('Content-Type', 'text/html');

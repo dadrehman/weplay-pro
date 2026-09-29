@@ -7,7 +7,8 @@
     "build": "node scripts/generate_build_info.js && prisma generate && tsc",
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "prisma:generate": "prisma generate",
+    "generate": "node ./node_modules/prisma/build/index.js generate --schema=./prisma/schema.prisma",
+    "prisma:generate": "node ./node_modules/prisma/build/index.js generate --schema=./prisma/schema.prisma",
     "prisma:migrate": "prisma migrate dev",
     "seed": "ts-node prisma/seed.ts",
     "test": "jest --runInBand --detectOpenHandles"

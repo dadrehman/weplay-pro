@@ -25,11 +25,13 @@ app.use(express.json());
 // Public Health & Deployment Verification Handler
 const healthHandler = async (req: Request, res: Response): Promise<void> => {
   let dbConnected = false;
+  let dbError: string | null = null;
   try {
     await prisma.$queryRaw`SELECT 1`;
     dbConnected = true;
-  } catch (_) {
+  } catch (err: any) {
     dbConnected = false;
+    dbError = err?.message || String(err);
   }
 
   const isDbUrlSet = Boolean(process.env.DATABASE_URL && process.env.DATABASE_URL.trim().length > 0);
@@ -58,6 +60,7 @@ const healthHandler = async (req: Request, res: Response): Promise<void> => {
     uptimeSeconds: Math.floor(process.uptime()),
     pid: process.pid,
     dbConnected,
+    dbError: dbConnected ? null : dbError,
     env: {
       JWT_SECRET: isJwtSet ? 'set' : 'missing',
       META_WHATSAPP_TOKEN: isMetaTokenSet ? 'set' : 'missing',
@@ -70,6 +73,38 @@ const healthHandler = async (req: Request, res: Response): Promise<void> => {
 };
 
 app.get(['/health', '/api/health', '/', '/api'], healthHandler);
+
+// One-click Web Trigger to initialize/generate Prisma Client on Linux without SSH/Terminal
+app.get(['/setup-prisma', '/api/setup-prisma', '/api/admin/generate-prisma'], async (req: Request, res: Response) => {
+  try {
+    const { exec } = await import('child_process');
+    const path = await import('path');
+    const cwd = path.resolve(__dirname, '..');
+    const nodeBin = process.execPath;
+    const cliPath = path.join(cwd, 'node_modules', 'prisma', 'build', 'index.js');
+    const schemaPath = path.join(cwd, 'prisma', 'schema.prisma');
+    const cmd = `"${nodeBin}" "${cliPath}" generate --schema="${schemaPath}"`;
+
+    exec(cmd, { cwd, timeout: 60000, env: process.env }, (error, stdout, stderr) => {
+      if (error) {
+        return res.status(500).json({
+          success: false,
+          error: error.message,
+          stdout,
+          stderr,
+        });
+      }
+      return res.status(200).json({
+        success: true,
+        message: 'Prisma Client successfully generated on server! Please restart the app in cPanel.',
+        stdout,
+        stderr,
+      });
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 // Meta Developer Compliance Endpoints (Privacy Policy, Terms, Data Deletion)
 app.get(['/privacy', '/api/privacy', '/privacy-policy', '/api/privacy-policy'], (req: Request, res: Response) => {
